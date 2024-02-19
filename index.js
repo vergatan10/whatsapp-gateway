@@ -1,20 +1,20 @@
 const express = require("express");
 const Whatsapp = require("./whatsapp");
+const { createServer } = require("http");
+const { Server } = require("socket.io");
+
 const app = express();
 const port = 3000;
+const server = createServer(app);
 
-let whatsapp = null;
+const io = new Server(server, {
+  cors: { origin: "*" },
+});
+
+let whatsapp = new Whatsapp(io);
 
 app.get("/", (req, res) => {
-  whatsapp = new Whatsapp();
-
-  try {
-    whatsapp.start();
-    res.send("Whatsapp started");
-  } catch (error) {
-    console.log(error);
-    res.send("Error starting Whatsapp");
-  }
+  res.send("Hello World!");
 });
 
 app.get("/qr", (req, res) => {
@@ -51,6 +51,27 @@ app.get("/send-message", (req, res) => {
 
   whatsapp.sendMessage(number, message);
   res.send(`Sending message to ${number}: ${message}`);
+});
+
+io.on("connection", (socket) => {
+  console.log("a user connected");
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+  });
+
+  if (whatsapp.getQR() !== "") {
+    io.emit("qr", whatsapp.getQR());
+    whatsapp.status = "waiting for scan";
+  }
+
+  io.emit("message", "connected to whatsapp server");
+  io.emit("status", whatsapp.getStatus());
+
+  socket.on("start", () => {
+    if (whatsapp.getStatus() !== "pending") return;
+    console.log("starting whatsapp");
+    whatsapp.start();
+  });
 });
 
 app.listen(port, () => {
