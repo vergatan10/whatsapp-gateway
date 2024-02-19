@@ -1,4 +1,4 @@
-const { Client } = require("whatsapp-web.js");
+const { Client, LocalAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
 
 class Whatsapp {
@@ -7,12 +7,13 @@ class Whatsapp {
   status;
 
   constructor() {
-    this.client = new Client();
+    this.client = new Client({
+      authStrategy: new LocalAuth(),
+    });
     this.qr = "";
     this.status = "pending";
 
     this.client.on("qr", (qr) => {
-      //   console.log("QR Received", qr);
       qrcode.generate(qr, { small: true });
       this.qr = qr;
     });
@@ -33,6 +34,10 @@ class Whatsapp {
 
   getStatus() {
     return this.status;
+  }
+
+  sendMessage(number, message) {
+    this.client.sendMessage(`${number}@c.us`, message);
   }
 }
 
